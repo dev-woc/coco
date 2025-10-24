@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator, Platform, Alert } from 'react-native';
+import { StyleSheet, View, Text, ActivityIndicator, Platform, Alert, TouchableOpacity } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, AnimatedRegion } from 'react-native-maps';
 import TruckMarker from './TruckMarker';
 import LocationService from '../services/LocationService';
 import { requestLocationPermission } from '../utils/locationPermissions';
+import { useNavigation } from '@react-navigation/native';
 
 export default function MapScreen() {
+  const navigation = useNavigation();
   const [truckLocation, setTruckLocation] = useState(null);
   const [isConnecting, setIsConnecting] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
@@ -146,6 +148,14 @@ export default function MapScreen() {
           </Text>
         </View>
       )}
+
+      {/* Admin button */}
+      <TouchableOpacity
+        style={styles.adminButton}
+        onPress={() => navigation.navigate('Admin')}
+      >
+        <Text style={styles.adminButtonText}>⚙️ Admin</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -200,5 +210,24 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  adminButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    backgroundColor: '#FF5722',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  adminButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

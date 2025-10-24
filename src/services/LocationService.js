@@ -173,6 +173,21 @@ class LocationService {
       this.socket.connect();
     }
   }
+
+  /**
+   * Send location update to server (for admin/driver use)
+   * @param {object} location - Location data {latitude, longitude, timestamp}
+   */
+  sendLocation(location) {
+    if (!this.socket || !this.isConnected) {
+      console.error('[LocationService] Cannot send location: not connected');
+      return false;
+    }
+
+    console.log('[LocationService] Sending location update:', location);
+    this.socket.emit('updateLocation', location);
+    return true;
+  }
 }
 
 // Export singleton instance

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import LocationService from '../services/LocationService';
+import { useNavigation } from '@react-navigation/native';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -35,6 +36,7 @@ function MapUpdater({ center }) {
 }
 
 export default function MapScreen() {
+  const navigation = useNavigation();
   const [truckLocation, setTruckLocation] = useState(null);
   const [isConnecting, setIsConnecting] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
@@ -139,6 +141,14 @@ export default function MapScreen() {
           </Text>
         </View>
       )}
+
+      {/* Admin button */}
+      <TouchableOpacity
+        style={styles.adminButton}
+        onPress={() => navigation.navigate('Admin')}
+      >
+        <Text style={styles.adminButtonText}>⚙️ Admin</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -186,5 +196,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontFamily: 'monospace',
+  },
+  adminButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    backgroundColor: '#FF5722',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    zIndex: 999,
+    cursor: 'pointer',
+  },
+  adminButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
