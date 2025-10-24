@@ -176,7 +176,7 @@ class LocationService {
 
   /**
    * Send location update to server (for admin/driver use)
-   * @param {object} location - Location data {latitude, longitude, timestamp}
+   * @param {object} location - Location data {latitude, longitude, timestamp, isBroadcasting}
    */
   sendLocation(location) {
     if (!this.socket || !this.isConnected) {
@@ -186,6 +186,21 @@ class LocationService {
 
     console.log('[LocationService] Sending location update:', location);
     this.socket.emit('updateLocation', location);
+    return true;
+  }
+
+  /**
+   * Send broadcast status to server (for admin/driver use)
+   * @param {boolean} isActive - Whether broadcasting is active
+   */
+  sendBroadcastStatus(isActive) {
+    if (!this.socket || !this.isConnected) {
+      console.error('[LocationService] Cannot send broadcast status: not connected');
+      return false;
+    }
+
+    console.log('[LocationService] Sending broadcast status:', isActive);
+    this.socket.emit('broadcastStatus', { isActive });
     return true;
   }
 }

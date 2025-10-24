@@ -12,6 +12,12 @@ import {
 } from 'react-native';
 import LocationService from '../services/LocationService';
 
+const STORAGE_KEYS = {
+  LATITUDE: 'coco_track_latitude',
+  LONGITUDE: 'coco_track_longitude',
+  BROADCAST: 'coco_track_broadcast',
+};
+
 export default function AdminScreen() {
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
@@ -19,7 +25,13 @@ export default function AdminScreen() {
   const [isSending, setIsSending] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [autoUpdate, setAutoUpdate] = useState(false);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [watchId, setWatchId] = useState(null);
+
+  // Load saved data on mount
+  useEffect(() => {
+    loadSavedData();
+  }, []);
 
   useEffect(() => {
     // Connect to WebSocket service
@@ -44,6 +56,62 @@ export default function AdminScreen() {
       LocationService.disconnect();
     };
   }, []);
+
+  const loadSavedData = () => {
+    try {
+      const savedLat = localStorage.getItem(STORAGE_KEYS.LATITUDE);
+      const savedLng = localStorage.getItem(STORAGE_KEYS.LONGITUDE);
+      const savedBroadcast = localStorage.getItem(STORAGE_KEYS.BROADCAST);
+
+      if (savedLat) setLatitude(savedLat);
+      if (savedLng) setLongitude(savedLng);
+      if (savedBroadcast !== null) setIsBroadcasting(savedBroadcast === 'true');
+    } catch (error) {
+      console.error('[AdminScreen] Error loading saved data:', error);
+    }
+  };
+
+  const saveLocation = (lat, lng) => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.LATITUDE, lat.toString());
+      localStorage.setItem(STORAGE_KEYS.LONGITUDE, lng.toString());
+    } catch (error) {
+      console.error('[AdminScreen] Error saving location:', error);
+    }
+  };
+
+  const saveBroadcastStatus = (status) => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.BROADCAST, status.toString());
+    } catch (error) {
+      console.error('[AdminScreen] Error saving broadcast status:', error);
+    }
+  };
+
+  const handleClearLocation = () => {
+    if (window.confirm('Are you sure you want to clear the saved location?')) {
+      try {
+        localStorage.removeItem(STORAGE_KEYS.LATITUDE);
+        localStorage.removeItem(STORAGE_KEYS.LONGITUDE);
+        setLatitude('');
+        setLongitude('');
+        alert('Location cleared!');
+      } catch (error) {
+        console.error('[AdminScreen] Error clearing location:', error);
+        alert('Failed to clear location');
+      }
+    }
+  };
+
+  const handleBroadcastToggle = (value) => {
+    setIsBroadcasting(value);
+    saveBroadcastStatus(value);
+
+    // If turning off broadcast, send a stop signal
+    if (!value && isConnected) {
+      LocationService.sendBroadcastStatus(false);
+    }
+  };
 
   // Handle auto-update toggle
   useEffect(() => {
@@ -98,8 +166,11 @@ export default function AdminScreen() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLatitude(position.coords.latitude.toString());
-        setLongitude(position.coords.longitude.toString());
+        const lat = position.coords.latitude.toString();
+        const lng = position.coords.longitude.toString();
+        setLatitude(lat);
+        setLongitude(lng);
+        saveLocation(lat, lng);
         setIsSending(false);
       },
       (error) => {
@@ -120,6 +191,7 @@ export default function AdminScreen() {
       latitude: typeof lat === 'string' ? parseFloat(lat) : lat,
       longitude: typeof lng === 'string' ? parseFloat(lng) : lng,
       timestamp: Date.now(),
+      isBroadcasting: isBroadcasting,
     };
 
     // Send location via WebSocket
@@ -147,6 +219,7 @@ export default function AdminScreen() {
     }
 
     setIsSending(true);
+    saveLocation(lat, lng);
     sendLocationUpdate(lat, lng);
 
     setTimeout(() => {
@@ -158,6 +231,7 @@ export default function AdminScreen() {
   const handleSetPresetLocation = (name, lat, lng) => {
     setLatitude(lat.toString());
     setLongitude(lng.toString());
+    saveLocation(lat, lng);
   };
 
   // Preset locations (can be customized)
@@ -193,6 +267,28 @@ export default function AdminScreen() {
             </Text>
           </View>
         )}
+
+        {/* Broadcast Toggle */}
+        <View style={styles.card}>
+          <View style={styles.autoUpdateRow}>
+            <View style={styles.autoUpdateText}>
+              <Text style={styles.cardTitle}>
+                {isBroadcasting ? '🟢 Broadcasting' : '🔴 Not Broadcasting'}
+              </Text>
+              <Text style={styles.descriptionText}>
+                {isBroadcasting
+                  ? 'Truck is OPEN and sharing location with customers'
+                  : 'Truck is CLOSED - customers cannot see location'}
+              </Text>
+            </View>
+            <Switch
+              value={isBroadcasting}
+              onValueChange={handleBroadcastToggle}
+              trackColor={{ false: '#767577', true: '#4CAF50' }}
+              thumbColor={isBroadcasting ? '#fff' : '#f4f3f4'}
+            />
+          </View>
+        </View>
 
         {/* Auto-Update Toggle */}
         <View style={styles.card}>
@@ -255,6 +351,14 @@ export default function AdminScreen() {
               {isSending ? 'Sending...' : 'Update Truck Location'}
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.buttonDanger]}
+            onPress={handleClearLocation}
+            disabled={autoUpdate || (!latitude && !longitude)}
+          >
+            <Text style={styles.buttonText}>Clear Saved Location</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Preset Locations */}
@@ -278,10 +382,13 @@ export default function AdminScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Instructions</Text>
           <Text style={styles.instructionText}>
-            1. Enable "Auto-Update" to send your current location automatically{'\n'}
-            2. Or manually enter coordinates and click "Update Truck Location"{'\n'}
-            3. Use "Quick Locations" for preset addresses{'\n'}
-            4. Customers will see the location update in real-time
+            1. Toggle "Broadcasting" ON when truck is open for business{'\n'}
+            2. Enable "Auto-Update" to send your current location automatically{'\n'}
+            3. Or manually enter coordinates and click "Update Truck Location"{'\n'}
+            4. Use "Quick Locations" for preset addresses{'\n'}
+            5. Saved locations persist between sessions{'\n'}
+            6. Click "Clear Saved Location" to reset coordinates{'\n'}
+            7. Customers can only see location when broadcasting is ON
           </Text>
         </View>
       </View>
@@ -387,6 +494,9 @@ const styles = StyleSheet.create({
   },
   buttonSecondary: {
     backgroundColor: '#2196F3',
+  },
+  buttonDanger: {
+    backgroundColor: '#9E9E9E',
   },
   buttonDisabled: {
     backgroundColor: '#ccc',

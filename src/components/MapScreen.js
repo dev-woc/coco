@@ -37,6 +37,22 @@ export default function MapScreen() {
           'Location permission is needed to show your position on the map. You can still view the truck location.',
           [{ text: 'OK' }]
         );
+      } else {
+        // Get user's current location to center map
+        try {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setRegion({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          });
+        } catch (error) {
+          console.log('[MapScreen] Could not get initial location:', error);
+          // Keep default Miami location
+        }
       }
     };
 

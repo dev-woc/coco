@@ -48,6 +48,27 @@ export default function MapScreen() {
   });
 
   useEffect(() => {
+    // Get user's current location to center map
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCenter({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log('[MapScreen] Could not get initial location:', error);
+          // Keep default Miami location
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 5000,
+          maximumAge: 0,
+        }
+      );
+    }
+
     // Connect to WebSocket service
     console.log('[MapScreen] Connecting to location service...');
     LocationService.connect('wss://api.coco-track.com');
