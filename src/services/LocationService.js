@@ -13,13 +13,16 @@ class LocationService {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.currentLocation = null;
+    this.demoMode = false;
+    this.demoInterval = null;
   }
 
   /**
    * Connect to WebSocket server
    * @param {string} url - WebSocket server URL
+   * @param {boolean} enableDemo - Enable demo mode for testing
    */
-  connect(url = 'wss://api.coco-track.com') {
+  connect(url = 'wss://api.coco-track.com', enableDemo = true) {
     if (this.socket && this.isConnected) {
       console.log('[LocationService] Already connected');
       return;
@@ -37,6 +40,16 @@ class LocationService {
     });
 
     this._setupEventHandlers();
+
+    // Enable demo mode if server is unreachable
+    if (enableDemo) {
+      setTimeout(() => {
+        if (!this.isConnected) {
+          console.log('[LocationService] Server unreachable, enabling DEMO MODE');
+          this.enableDemoMode();
+        }
+      }, 3000);
+    }
   }
 
   /**
@@ -202,6 +215,77 @@ class LocationService {
     console.log('[LocationService] Sending broadcast status:', isActive);
     this.socket.emit('broadcastStatus', { isActive });
     return true;
+  }
+
+  /**
+   * Enable demo mode - simulates a truck in Miami, FL
+   */
+  enableDemoMode() {
+    if (this.demoMode) return;
+
+    console.log('[LocationService] 🎭 DEMO MODE ENABLED - Simulating truck in Miami, FL');
+    this.demoMode = true;
+    this.isConnected = true; // Simulate connection
+
+    // Starting location: Wynwood, Miami
+    let latitude = 25.8010;
+    let longitude = -80.1994;
+    let direction = 1;
+
+    // Send initial location
+    this.currentLocation = {
+      latitude,
+      longitude,
+      timestamp: Date.now(),
+      demo: true,
+    };
+    this._notifyListeners(this.currentLocation);
+
+    // Simulate truck movement every 5 seconds
+    this.demoInterval = setInterval(() => {
+      // Move truck slightly (simulates driving around)
+      latitude += (Math.random() - 0.5) * 0.002 * direction;
+      longitude += (Math.random() - 0.5) * 0.002 * direction;
+
+      // Keep within Miami bounds
+      if (latitude > 25.85 || latitude < 25.75) direction *= -1;
+      if (longitude > -80.15 || longitude < -80.25) direction *= -1;
+
+      this.currentLocation = {
+        latitude,
+        longitude,
+        timestamp: Date.now(),
+        demo: true,
+      };
+
+      this._notifyListeners(this.currentLocation);
+      console.log('[LocationService] 🎭 Demo update:', latitude.toFixed(4), longitude.toFixed(4));
+    }, 5000);
+  }
+
+  /**
+   * Disable demo mode
+   */
+  disableDemoMode() {
+    if (!this.demoMode) return;
+
+    console.log('[LocationService] 🎭 DEMO MODE DISABLED');
+    this.demoMode = false;
+    this.isConnected = false;
+
+    if (this.demoInterval) {
+      clearInterval(this.demoInterval);
+      this.demoInterval = null;
+    }
+
+    this.currentLocation = null;
+  }
+
+  /**
+   * Check if demo mode is active
+   */
+  isDemoMode() {
+    return this.demoMode;
   }
 }
 

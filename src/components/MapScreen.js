@@ -12,6 +12,7 @@ export default function MapScreen() {
   const [isConnecting, setIsConnecting] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const mapRef = useRef(null);
 
   // Animated region for smooth marker movement
@@ -66,6 +67,7 @@ export default function MapScreen() {
       console.log('[MapScreen] Received location update:', location);
       setIsConnecting(false);
       setConnectionError(false);
+      setIsDemoMode(LocationService.isDemoMode());
 
       // Update truck location
       setTruckLocation(location);
@@ -115,15 +117,22 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Demo mode banner */}
+      {isDemoMode && (
+        <View style={[styles.statusBanner, styles.demoBanner]}>
+          <Text style={styles.statusText}>🎭 DEMO MODE - Sample truck in Miami, FL</Text>
+        </View>
+      )}
+
       {/* Connection status banner */}
-      {isConnecting && (
+      {isConnecting && !isDemoMode && (
         <View style={styles.statusBanner}>
           <ActivityIndicator color="#FFFFFF" style={styles.loader} />
           <Text style={styles.statusText}>Connecting to truck...</Text>
         </View>
       )}
 
-      {connectionError && (
+      {connectionError && !isDemoMode && (
         <View style={[styles.statusBanner, styles.errorBanner]}>
           <Text style={styles.statusText}>Connection lost. Retrying...</Text>
         </View>
@@ -204,6 +213,9 @@ const styles = StyleSheet.create({
   },
   errorBanner: {
     backgroundColor: '#FF5722',
+  },
+  demoBanner: {
+    backgroundColor: '#9C27B0',
   },
   loader: {
     marginRight: 8,
